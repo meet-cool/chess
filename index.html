@@ -3,12 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
-  <title>小志五子棋</title>
+  <title>小志五子棋 · 现代对局</title>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     body {
       background: #faf8ef;
@@ -23,8 +27,6 @@
       margin: 0;
       transition: background 0.3s, color 0.3s;
       overscroll-behavior: none;
-      -webkit-user-select: none;
-      user-select: none;
     }
     body.dark-mode {
       background: #1a1d23;
@@ -145,6 +147,7 @@
       touch-action: none;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       transition: background 0.3s;
+      outline: none;
     }
     body.dark-mode canvas {
       background: #c8bda8;
@@ -395,13 +398,17 @@
   (function() {
     const BOARD_SIZE = 15;
     const BASE_SIZE = 500;
-    let currentScale = 1;
-    let offsetX = 0, offsetY = 0;
+    // 视口变换状态
+    let viewScale = 1;
+    let viewOffsetX = 0, viewOffsetY = 0;
+    
+    // 触摸相关
     let isPinching = false;
     let pinchStartDist = 0;
     let pinchStartScale = 1;
     let pinchStartOffsetX = 0, pinchStartOffsetY = 0;
-    let pinchCenterX = 0, pinchCenterY = 0;
+    let pinchMidX = 0, pinchMidY = 0; // 两指中点相对于canvas元素的位置
+    
     let lastTapTime = 0;
     let doubleTapEnabled = false;
     let lastAIMove = null;
@@ -447,29 +454,32 @@
     const pinchOverlay = document.getElementById('pinchOverlay');
     const doubleTapCheckbox = document.getElementById('doubleTapCheckbox');
 
-    function getPADDING() { return PADDING_BASE * currentScale; }
-    function getCELL() { return (BASE_SIZE * currentScale - getPADDING() * 2) / (BOARD_SIZE - 1); }
-    function getRADIUS() { return RADIUS_BASE * currentScale; }
+    // 固定canvas分辨率，避免不断重置导致闪烁
+    canvas.width = BASE_SIZE;
+    canvas.height = BASE_SIZE;
+
+    function getPADDING() { return PADDING_BASE * viewScale; }
+    function getCELL() { return (BASE_SIZE * viewScale - getPADDING() * 2) / (BOARD_SIZE - 1); }
+    function getRADIUS() { return RADIUS_BASE * viewScale; }
 
     function boardToPixel(row, col) {
       const padding = getPADDING();
       const cell = getCELL();
       return {
-        x: padding + col * cell + offsetX,
-        y: padding + row * cell + offsetY
+        x: padding + col * cell + viewOffsetX,
+        y: padding + row * cell + viewOffsetY
       };
     }
 
     function pixelToBoard(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = BASE_SIZE * currentScale / rect.width;
-      const scaleY = BASE_SIZE * currentScale / rect.height;
-      const canvasX = (clientX - rect.left) * scaleX;
-      const canvasY = (clientY - rect.top) * scaleY;
+      // 将屏幕坐标映射到canvas内部坐标 (基于viewScale和offset)
+      const canvasX = (clientX - rect.left) * (BASE_SIZE / rect.width);
+      const canvasY = (clientY - rect.top) * (BASE_SIZE / rect.height);
       const padding = getPADDING();
       const cell = getCELL();
-      const col = Math.round((canvasX - padding - offsetX) / cell);
-      const row = Math.round((canvasY - padding - offsetY) / cell);
+      const col = Math.round((canvasX - padding - viewOffsetX) / cell);
+      const row = Math.round((canvasY - padding - viewOffsetY) / cell);
       if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) return { row, col };
       return null;
     }
@@ -589,9 +599,9 @@
       hardcoreMatchCount = 0;
       hardcoreCheatDetected = false;
       lastAIMove = null;
-      currentScale = 1;
-      offsetX = 0;
-      offsetY = 0;
+      viewScale = 1;
+      viewOffsetX = 0;
+      viewOffsetY = 0;
       startOverlay.style.display = 'flex';
       if (playerColor === 'black') { humanPiece = BLACK; aiPiece = WHITE; currentTurn = 'human'; }
       else { humanPiece = WHITE; aiPiece = BLACK; currentTurn = 'ai'; }
@@ -718,47 +728,43 @@
     }
 
     function drawBoard() {
-      const w = BASE_SIZE * currentScale;
-      const h = BASE_SIZE * currentScale;
-      canvas.width = w;
-      canvas.height = h;
-      ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, BASE_SIZE, BASE_SIZE);
       ctx.fillStyle = getComputedStyle(document.body).backgroundColor.includes('1a1d23') ? '#c8bda8' : '#e8dcc8';
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, BASE_SIZE, BASE_SIZE);
       
       const padding = getPADDING();
       const cell = getCELL();
       
       ctx.strokeStyle = '#8f7a66';
-      ctx.lineWidth = 1.5 * currentScale;
+      ctx.lineWidth = 1.5 * viewScale;
       for (let i = 0; i < BOARD_SIZE; i++) {
         const pos = padding + i * cell;
         ctx.beginPath();
-        ctx.moveTo(padding + offsetX, pos + offsetY);
-        ctx.lineTo(padding + (BOARD_SIZE-1)*cell + offsetX, pos + offsetY);
+        ctx.moveTo(padding + viewOffsetX, pos + viewOffsetY);
+        ctx.lineTo(padding + (BOARD_SIZE-1)*cell + viewOffsetX, pos + viewOffsetY);
         ctx.stroke();
-        ctx.moveTo(pos + offsetX, padding + offsetY);
-        ctx.lineTo(pos + offsetX, padding + (BOARD_SIZE-1)*cell + offsetY);
+        ctx.moveTo(pos + viewOffsetX, padding + viewOffsetY);
+        ctx.lineTo(pos + viewOffsetX, padding + (BOARD_SIZE-1)*cell + viewOffsetY);
         ctx.stroke();
       }
 
       ctx.fillStyle = '#776e65';
-      ctx.font = `bold ${12*currentScale}px "Clear Sans", "Helvetica Neue", Arial`;
+      ctx.font = `bold ${12*viewScale}px "Clear Sans", "Helvetica Neue", Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i = 0; i < BOARD_SIZE; i++) {
         const pos = padding + i * cell;
-        ctx.fillText(String.fromCharCode(65 + i), pos + offsetX, padding - 14*currentScale + offsetY);
-        ctx.fillText(String.fromCharCode(65 + i), pos + offsetX, padding + (BOARD_SIZE-1)*cell + 14*currentScale + offsetY);
-        ctx.fillText(i + 1, padding - 16*currentScale + offsetX, pos + offsetY);
-        ctx.fillText(i + 1, padding + (BOARD_SIZE-1)*cell + 16*currentScale + offsetX, pos + offsetY);
+        ctx.fillText(String.fromCharCode(65 + i), pos + viewOffsetX, padding - 14*viewScale + viewOffsetY);
+        ctx.fillText(String.fromCharCode(65 + i), pos + viewOffsetX, padding + (BOARD_SIZE-1)*cell + 14*viewScale + viewOffsetY);
+        ctx.fillText(i + 1, padding - 16*viewScale + viewOffsetX, pos + viewOffsetY);
+        ctx.fillText(i + 1, padding + (BOARD_SIZE-1)*cell + 16*viewScale + viewOffsetX, pos + viewOffsetY);
       }
 
       const stars = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
       ctx.fillStyle = '#776e65';
       stars.forEach(([r,c]) => {
         const {x, y} = boardToPixel(r, c);
-        ctx.fillRect(x-2.5*currentScale, y-2.5*currentScale, 5*currentScale, 5*currentScale);
+        ctx.fillRect(x-2.5*viewScale, y-2.5*viewScale, 5*viewScale, 5*viewScale);
       });
 
       const radius = getRADIUS();
@@ -766,7 +772,7 @@
         for (let c=0; c<BOARD_SIZE; c++) {
           if (board[r][c]===0) continue;
           const {x, y} = boardToPixel(r, c);
-          const grad = ctx.createRadialGradient(x-3*currentScale, y-3*currentScale, 2*currentScale, x, y, radius+2*currentScale);
+          const grad = ctx.createRadialGradient(x-3*viewScale, y-3*viewScale, 2*viewScale, x, y, radius+2*viewScale);
           if (board[r][c]===BLACK) {
             grad.addColorStop(0,'#555'); grad.addColorStop(0.7,'#111'); grad.addColorStop(1,'#000');
           } else {
@@ -774,22 +780,20 @@
           }
           ctx.fillStyle = grad;
           ctx.beginPath(); ctx.arc(x, y, radius, 0, 2*Math.PI); ctx.fill();
-          ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(x-3*currentScale, y-3*currentScale, radius/4, 0, 2*Math.PI); ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(x-3*viewScale, y-3*viewScale, radius/4, 0, 2*Math.PI); ctx.fill();
         }
       }
 
-      // 标注对手最后落子
       if (lastAIMove && board[lastAIMove.row][lastAIMove.col] === aiPiece) {
         const {x, y} = boardToPixel(lastAIMove.row, lastAIMove.col);
         ctx.strokeStyle = '#f0652f';
-        ctx.lineWidth = 2.2 * currentScale;
+        ctx.lineWidth = 2.2 * viewScale;
         ctx.beginPath();
-        ctx.arc(x, y, radius + 4 * currentScale, 0, 2 * Math.PI);
+        ctx.arc(x, y, radius + 4 * viewScale, 0, 2 * Math.PI);
         ctx.stroke();
-        // 小圆点标记
         ctx.fillStyle = '#f0652f';
         ctx.beginPath();
-        ctx.arc(x, y - radius - 6 * currentScale, 3 * currentScale, 0, 2 * Math.PI);
+        ctx.arc(x, y - radius - 6 * viewScale, 3 * viewScale, 0, 2 * Math.PI);
         ctx.fill();
       }
 
@@ -798,10 +802,10 @@
         if (hint) {
           const {x, y} = boardToPixel(hint.row, hint.col);
           ctx.strokeStyle = '#4CAF50';
-          ctx.lineWidth = 2 * currentScale;
-          ctx.setLineDash([4 * currentScale, 4 * currentScale]);
+          ctx.lineWidth = 2 * viewScale;
+          ctx.setLineDash([4 * viewScale, 4 * viewScale]);
           ctx.beginPath();
-          ctx.arc(x, y, radius + 4 * currentScale, 0, 2 * Math.PI);
+          ctx.arc(x, y, radius + 4 * viewScale, 0, 2 * Math.PI);
           ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -858,9 +862,12 @@
         e.preventDefault();
         isPinching = true;
         pinchStartDist = getDistance(e.touches);
-        pinchStartScale = currentScale;
-        pinchStartOffsetX = offsetX;
-        pinchStartOffsetY = offsetY;
+        pinchStartScale = viewScale;
+        pinchStartOffsetX = viewOffsetX;
+        pinchStartOffsetY = viewOffsetY;
+        const rect = canvas.getBoundingClientRect();
+        pinchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        pinchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
         pinchOverlay.classList.add('active');
       }
     }, { passive: false });
@@ -872,10 +879,12 @@
         const scaleChange = newDist / pinchStartDist;
         const newScale = Math.min(2.5, Math.max(0.8, pinchStartScale * scaleChange));
         const rect = canvas.getBoundingClientRect();
+        const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
         const scaleRatio = newScale / pinchStartScale;
-        offsetX = (offsetX - (e.touches[0].clientX - rect.left)) * scaleRatio + (e.touches[0].clientX - rect.left);
-        offsetY = (offsetY - (e.touches[0].clientY - rect.top)) * scaleRatio + (e.touches[0].clientY - rect.top);
-        currentScale = newScale;
+        viewOffsetX = currentMidX - (pinchMidX - pinchStartOffsetX) * scaleRatio;
+        viewOffsetY = currentMidY - (pinchMidY - pinchStartOffsetY) * scaleRatio;
+        viewScale = newScale;
         drawBoard();
       }
     }, { passive: false });
