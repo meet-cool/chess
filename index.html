@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=1.5">
-  <title>小志五子棋 · 现代对局</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+  <title>小志五子棋</title>
   <style>
     * {
       margin: 0;
@@ -14,14 +14,17 @@
       background: #faf8ef;
       color: #776e65;
       font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
-      font-size: 18px;
+      font-size: 16px;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      padding: 20px;
+      padding: 10px;
       margin: 0;
       transition: background 0.3s, color 0.3s;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     body.dark-mode {
       background: #1a1d23;
@@ -30,10 +33,13 @@
     .game-wrapper {
       background: #faf8ef;
       border-radius: 6px;
-      padding: 20px 20px 25px;
-      max-width: 580px;
+      padding: 12px 12px 18px;
+      max-width: 100%;
       width: 100%;
       transition: background 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     body.dark-mode .game-wrapper {
       background: #252830;
@@ -42,28 +48,29 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
+      width: 100%;
     }
     h1.title {
-      font-size: 34px;
+      font-size: 26px;
       font-weight: bold;
       margin: 0;
       line-height: 1;
     }
     .top-controls {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       flex-wrap: wrap;
     }
     .mode-selector {
       display: flex;
-      gap: 4px;
+      gap: 3px;
       background: #d6cdc0;
       border-radius: 3px;
-      padding: 3px;
+      padding: 2px;
     }
     body.dark-mode .mode-selector {
       background: #3a3d44;
@@ -73,10 +80,10 @@
       border: none;
       color: #776e65;
       font-weight: bold;
-      padding: 6px 14px;
+      padding: 5px 10px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       transition: all 0.15s;
     }
     body.dark-mode .mode-option {
@@ -95,10 +102,10 @@
       border: none;
       color: white;
       font-weight: bold;
-      padding: 8px 14px;
+      padding: 6px 10px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       transition: background 0.2s;
     }
     body.dark-mode .theme-btn,
@@ -106,14 +113,24 @@
     body.dark-mode .music-btn {
       background: #4a4d56;
     }
+    .game-container-outer {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 10px;
+    }
     .game-container {
       background: #bbada0;
       border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 15px;
+      padding: 10px;
       display: flex;
       justify-content: center;
+      align-items: center;
       transition: background 0.3s;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
     }
     body.dark-mode .game-container {
       background: #3a3d44;
@@ -123,8 +140,7 @@
       background: #e8dcc8;
       border-radius: 3px;
       width: 100%;
-      height: auto;
-      max-width: 500px;
+      height: 100%;
       cursor: pointer;
       touch-action: none;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
@@ -132,6 +148,22 @@
     }
     body.dark-mode canvas {
       background: #c8bda8;
+    }
+    .pinch-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(180,180,180,0.3);
+      border-radius: 6px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 10;
+    }
+    .pinch-overlay.active {
+      opacity: 1;
     }
     .start-overlay {
       position: absolute;
@@ -144,16 +176,17 @@
       align-items: center;
       background: rgba(0,0,0,0.3);
       border-radius: 6px;
+      z-index: 20;
     }
     .start-btn {
       background: #8f7a66;
       border: none;
       color: #f9f6f2;
       font-weight: bold;
-      padding: 16px 40px;
+      padding: 14px 32px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 22px;
+      font-size: 20px;
       letter-spacing: 2px;
     }
     .controls {
@@ -161,27 +194,28 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
+      gap: 8px;
+      margin-top: 8px;
+      width: 100%;
     }
     .turn-indicator {
       background: #bbada0;
       color: white;
       font-weight: bold;
-      padding: 8px 18px;
+      padding: 6px 14px;
       border-radius: 3px;
-      font-size: 16px;
+      font-size: 15px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       transition: background 0.3s;
     }
     body.dark-mode .turn-indicator {
       background: #4a4d56;
     }
     .stone-icon {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       display: inline-block;
     }
@@ -193,17 +227,17 @@
     }
     .color-buttons {
       display: flex;
-      gap: 5px;
+      gap: 4px;
     }
     .color-btn {
       background: #eee4da;
       border: none;
       color: #776e65;
       font-weight: bold;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       transition: all 0.15s;
     }
     body.dark-mode .color-btn {
@@ -223,22 +257,24 @@
     }
     .action-buttons {
       display: flex;
-      gap: 8px;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
     }
     .btn {
       background: #8f7a66;
       border: none;
       color: #f9f6f2;
       font-weight: bold;
-      padding: 10px 18px;
+      padding: 8px 14px;
       border-radius: 3px;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       transition: background 0.2s;
       letter-spacing: 0.5px;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
     }
     .btn:hover {
       background: #9f8b77;
@@ -254,35 +290,52 @@
       background: #f9f6f2;
       color: #776e65;
       border-radius: 3px;
-      padding: 2px 8px;
+      padding: 1px 6px;
       font-weight: bold;
-      margin-left: 4px;
+      margin-left: 3px;
+    }
+    .double-tap-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #776e65;
+    }
+    body.dark-mode .double-tap-toggle {
+      color: #ccc;
     }
     .result-area {
-      margin-top: 12px;
+      margin-top: 8px;
       font-weight: bold;
       text-align: center;
-      min-height: 28px;
-      font-size: 17px;
+      min-height: 24px;
+      font-size: 15px;
     }
     .result-area a {
       color: #8f7a66;
       text-decoration: underline;
       cursor: pointer;
-      margin-left: 8px;
+      margin-left: 6px;
     }
     .footer-note {
       text-align: center;
-      font-size: 13px;
-      margin-top: 6px;
+      font-size: 12px;
+      margin-top: 4px;
       opacity: 0.7;
     }
-    .game-container-wrapper {
-      position: relative;
+    .gesture-hint {
+      text-align: center;
+      font-size: 12px;
+      color: #8f7a66;
+      margin-top: 2px;
     }
-    @media (max-width: 500px) {
+    @media (min-width: 600px) {
       h1.title {
-        font-size: 26px;
+        font-size: 34px;
+      }
+      .mode-option {
+        font-size: 14px;
+        padding: 6px 14px;
       }
     }
   </style>
@@ -302,9 +355,10 @@
     </div>
   </div>
 
-  <div class="game-container-wrapper">
+  <div class="game-container-outer">
     <div class="game-container" id="gameContainer">
       <canvas id="boardCanvas" width="500" height="500" style="display:none;"></canvas>
+      <div class="pinch-overlay" id="pinchOverlay"></div>
     </div>
     <div class="start-overlay" id="startOverlay">
       <button class="start-btn" id="startGameBtn">开始游戏</button>
@@ -322,13 +376,17 @@
     </div>
   </div>
 
-  <div class="action-buttons" style="margin-top: 12px;">
+  <div class="action-buttons" style="margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <button class="btn" id="undoBtn">
       ↩️ 悔棋 <span class="undo-badge" id="undoCount">3</span>
     </button>
     <button class="btn" id="restartBtn">↺ 新局</button>
+    <div class="double-tap-toggle">
+      <input type="checkbox" id="doubleTapCheckbox"> 双击落子
+    </div>
   </div>
 
+  <div class="gesture-hint">👆 双指缩放移动 · 单击落子</div>
   <div class="result-area" id="resultMessage"></div>
   <div class="footer-note">本页面由AI强力驱动</div>
 </div>
@@ -336,9 +394,21 @@
 <script>
   (function() {
     const BOARD_SIZE = 15;
-    const PADDING = 25;
-    const CELL = (500 - PADDING * 2) / (BOARD_SIZE - 1);
-    const RADIUS = 12;
+    const BASE_SIZE = 500;
+    let currentScale = 1;
+    let offsetX = 0, offsetY = 0;
+    let isPinching = false;
+    let pinchStartDist = 0;
+    let pinchStartScale = 1;
+    let pinchStartOffsetX = 0, pinchStartOffsetY = 0;
+    let pinchCenterX = 0, pinchCenterY = 0;
+    let lastTapTime = 0;
+    let doubleTapEnabled = false;
+    let lastAIMove = null;
+
+    const PADDING_BASE = 25;
+    const RADIUS_BASE = 12;
+
     const BLACK = 1, WHITE = 2;
 
     let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
@@ -374,20 +444,32 @@
     const modeButtons = document.querySelectorAll('.mode-option');
     const startOverlay = document.getElementById('startOverlay');
     const startGameBtn = document.getElementById('startGameBtn');
-    const gameContainer = document.getElementById('gameContainer');
+    const pinchOverlay = document.getElementById('pinchOverlay');
+    const doubleTapCheckbox = document.getElementById('doubleTapCheckbox');
+
+    function getPADDING() { return PADDING_BASE * currentScale; }
+    function getCELL() { return (BASE_SIZE * currentScale - getPADDING() * 2) / (BOARD_SIZE - 1); }
+    function getRADIUS() { return RADIUS_BASE * currentScale; }
 
     function boardToPixel(row, col) {
-      return { x: PADDING + col * CELL, y: PADDING + row * CELL };
+      const padding = getPADDING();
+      const cell = getCELL();
+      return {
+        x: padding + col * cell + offsetX,
+        y: padding + row * cell + offsetY
+      };
     }
 
     function pixelToBoard(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const scaleX = BASE_SIZE * currentScale / rect.width;
+      const scaleY = BASE_SIZE * currentScale / rect.height;
       const canvasX = (clientX - rect.left) * scaleX;
       const canvasY = (clientY - rect.top) * scaleY;
-      const col = Math.round((canvasX - PADDING) / CELL);
-      const row = Math.round((canvasY - PADDING) / CELL);
+      const padding = getPADDING();
+      const cell = getCELL();
+      const col = Math.round((canvasX - padding - offsetX) / cell);
+      const row = Math.round((canvasY - padding - offsetY) / cell);
       if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) return { row, col };
       return null;
     }
@@ -471,14 +553,9 @@
       if (type === 'human') {
         turnLabel.textContent = '🏆 胜利';
         if (gameMode === 'hardcore') {
-          if (hardcoreCheatDetected) {
-            showResult('可以，你确实赢了，但借助了外力，胜之不武。');
-          } else {
-            showResult('你很强，够硬核！');
-          }
-        } else {
-          showResult('✨ 漂亮！你赢了');
-        }
+          if (hardcoreCheatDetected) showResult('可以，你确实赢了，但借助了外力，胜之不武。');
+          else showResult('你很强，够硬核！');
+        } else showResult('✨ 漂亮！你赢了');
       } else if (type === 'ai') {
         turnLabel.textContent = '🤖 AI胜';
         showResult('🧘 年轻人，还得再沉淀沉淀');
@@ -494,6 +571,7 @@
       startOverlay.style.display = 'none';
       hardcoreMatchCount = 0;
       hardcoreCheatDetected = false;
+      lastAIMove = null;
       updateUIStates();
       updateTurnUI();
       drawBoard();
@@ -510,12 +588,13 @@
       gameStarted = false;
       hardcoreMatchCount = 0;
       hardcoreCheatDetected = false;
+      lastAIMove = null;
+      currentScale = 1;
+      offsetX = 0;
+      offsetY = 0;
       startOverlay.style.display = 'flex';
-      if (playerColor === 'black') {
-        humanPiece = BLACK; aiPiece = WHITE; currentTurn = 'human';
-      } else {
-        humanPiece = WHITE; aiPiece = BLACK; currentTurn = 'ai';
-      }
+      if (playerColor === 'black') { humanPiece = BLACK; aiPiece = WHITE; currentTurn = 'human'; }
+      else { humanPiece = WHITE; aiPiece = BLACK; currentTurn = 'ai'; }
       updateUIStates();
       updateTurnUI();
       drawBoard();
@@ -533,9 +612,7 @@
       if (gameStarted) return;
       if (gameMode === mode) return;
       gameMode = mode;
-      modeButtons.forEach(btn => {
-        btn.classList.toggle('active-mode', btn.dataset.mode === mode);
-      });
+      modeButtons.forEach(btn => btn.classList.toggle('active-mode', btn.dataset.mode === mode));
       resetGame();
       updateUIStates();
     }
@@ -550,6 +627,8 @@
       const humanStep = historyStack.pop();
       board[aiStep.row][aiStep.col] = 0;
       board[humanStep.row][humanStep.col] = 0;
+      lastAIMove = historyStack.length > 0 ? historyStack[historyStack.length-1] : null;
+      if (lastAIMove && lastAIMove.piece !== aiPiece) lastAIMove = null;
       undoRemaining--;
       undoCountSpan.textContent = undoRemaining;
       currentTurn = 'human';
@@ -566,9 +645,7 @@
         const hint = getBestMove();
         if (hint && hint.row === row && hint.col === col) {
           hardcoreMatchCount++;
-          if (hardcoreMatchCount >= 10) {
-            hardcoreCheatDetected = true;
-          }
+          if (hardcoreMatchCount >= 10) hardcoreCheatDetected = true;
         }
       }
       historyStack.push({ row, col, piece: humanPiece });
@@ -585,13 +662,10 @@
       if (!gameStarted || gameOver || currentTurn !== 'ai') return;
       if (isFull()) { endGame('draw'); return; }
       const move = getBestMove();
-      if (!move) {
-        if (isFull()) endGame('draw');
-        else { currentTurn = 'human'; updateTurnUI(); }
-        drawBoard(); return;
-      }
+      if (!move) { if (isFull()) endGame('draw'); else { currentTurn = 'human'; updateTurnUI(); } drawBoard(); return; }
       historyStack.push({ row: move.row, col: move.col, piece: aiPiece });
       board[move.row][move.col] = aiPiece;
+      lastAIMove = { row: move.row, col: move.col };
       drawBoard();
       if (checkWin(move.row, move.col, aiPiece)) { endGame('ai'); return; }
       if (isFull()) { endGame('draw'); return; }
@@ -644,62 +718,92 @@
     }
 
     function drawBoard() {
-      ctx.clearRect(0, 0, 500, 500);
+      const w = BASE_SIZE * currentScale;
+      const h = BASE_SIZE * currentScale;
+      canvas.width = w;
+      canvas.height = h;
+      ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = getComputedStyle(document.body).backgroundColor.includes('1a1d23') ? '#c8bda8' : '#e8dcc8';
-      ctx.fillRect(0, 0, 500, 500);
+      ctx.fillRect(0, 0, w, h);
+      
+      const padding = getPADDING();
+      const cell = getCELL();
+      
       ctx.strokeStyle = '#8f7a66';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.5 * currentScale;
       for (let i = 0; i < BOARD_SIZE; i++) {
-        const pos = PADDING + i * CELL;
+        const pos = padding + i * cell;
         ctx.beginPath();
-        ctx.moveTo(PADDING, pos);
-        ctx.lineTo(500 - PADDING, pos);
+        ctx.moveTo(padding + offsetX, pos + offsetY);
+        ctx.lineTo(padding + (BOARD_SIZE-1)*cell + offsetX, pos + offsetY);
         ctx.stroke();
-        ctx.moveTo(pos, PADDING);
-        ctx.lineTo(pos, 500 - PADDING);
+        ctx.moveTo(pos + offsetX, padding + offsetY);
+        ctx.lineTo(pos + offsetX, padding + (BOARD_SIZE-1)*cell + offsetY);
         ctx.stroke();
       }
+
       ctx.fillStyle = '#776e65';
-      ctx.font = 'bold 13px "Clear Sans", "Helvetica Neue", Arial';
+      ctx.font = `bold ${12*currentScale}px "Clear Sans", "Helvetica Neue", Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i = 0; i < BOARD_SIZE; i++) {
-        const pos = PADDING + i * CELL;
-        ctx.fillText(String.fromCharCode(65 + i), pos, PADDING - 14);
-        ctx.fillText(String.fromCharCode(65 + i), pos, 500 - PADDING + 14);
-        ctx.fillText(i + 1, PADDING - 16, pos);
-        ctx.fillText(i + 1, 500 - PADDING + 16, pos);
+        const pos = padding + i * cell;
+        ctx.fillText(String.fromCharCode(65 + i), pos + offsetX, padding - 14*currentScale + offsetY);
+        ctx.fillText(String.fromCharCode(65 + i), pos + offsetX, padding + (BOARD_SIZE-1)*cell + 14*currentScale + offsetY);
+        ctx.fillText(i + 1, padding - 16*currentScale + offsetX, pos + offsetY);
+        ctx.fillText(i + 1, padding + (BOARD_SIZE-1)*cell + 16*currentScale + offsetX, pos + offsetY);
       }
+
       const stars = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
       ctx.fillStyle = '#776e65';
       stars.forEach(([r,c]) => {
         const {x, y} = boardToPixel(r, c);
-        ctx.fillRect(x-2.5, y-2.5, 5, 5);
+        ctx.fillRect(x-2.5*currentScale, y-2.5*currentScale, 5*currentScale, 5*currentScale);
       });
+
+      const radius = getRADIUS();
       for (let r=0; r<BOARD_SIZE; r++) {
         for (let c=0; c<BOARD_SIZE; c++) {
           if (board[r][c]===0) continue;
           const {x, y} = boardToPixel(r, c);
-          const grad = ctx.createRadialGradient(x-3,y-3,2,x,y,RADIUS+2);
+          const grad = ctx.createRadialGradient(x-3*currentScale, y-3*currentScale, 2*currentScale, x, y, radius+2*currentScale);
           if (board[r][c]===BLACK) {
             grad.addColorStop(0,'#555'); grad.addColorStop(0.7,'#111'); grad.addColorStop(1,'#000');
           } else {
             grad.addColorStop(0,'#fff'); grad.addColorStop(0.5,'#ddd'); grad.addColorStop(1,'#999');
           }
           ctx.fillStyle = grad;
-          ctx.beginPath(); ctx.arc(x,y,RADIUS,0,2*Math.PI); ctx.fill();
-          ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(x-3,y-3,RADIUS/4,0,2*Math.PI); ctx.fill();
+          ctx.beginPath(); ctx.arc(x, y, radius, 0, 2*Math.PI); ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(x-3*currentScale, y-3*currentScale, radius/4, 0, 2*Math.PI); ctx.fill();
         }
       }
+
+      // 标注对手最后落子
+      if (lastAIMove && board[lastAIMove.row][lastAIMove.col] === aiPiece) {
+        const {x, y} = boardToPixel(lastAIMove.row, lastAIMove.col);
+        ctx.strokeStyle = '#f0652f';
+        ctx.lineWidth = 2.2 * currentScale;
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 4 * currentScale, 0, 2 * Math.PI);
+        ctx.stroke();
+        // 小圆点标记
+        ctx.fillStyle = '#f0652f';
+        ctx.beginPath();
+        ctx.arc(x, y - radius - 6 * currentScale, 3 * currentScale, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
       if (hintEnabled && gameStarted && !gameOver && currentTurn === 'human' && gameMode !== 'hardcore') {
         const hint = getBestMove();
         if (hint) {
           const {x, y} = boardToPixel(hint.row, hint.col);
-          ctx.strokeStyle = '#f0652f';
-          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#4CAF50';
+          ctx.lineWidth = 2 * currentScale;
+          ctx.setLineDash([4 * currentScale, 4 * currentScale]);
           ctx.beginPath();
-          ctx.arc(x, y, RADIUS+4, 0, 2*Math.PI);
+          ctx.arc(x, y, radius + 4 * currentScale, 0, 2 * Math.PI);
           ctx.stroke();
+          ctx.setLineDash([]);
         }
       }
     }
@@ -736,26 +840,73 @@
       if (!audio) {
         audio = new Audio('https://music.163.com/song/media/outer/url?id=2720818865.mp3');
         audio.loop = true;
-        audio.play().then(() => {
-          musicPlaying = true;
-          musicBtn.textContent = '🎵 暂停';
-        }).catch(() => {
-          audio = null;
-          musicPlaying = false;
-        });
+        audio.play().then(() => { musicPlaying = true; musicBtn.textContent = '🎵 暂停'; }).catch(() => { audio = null; });
       } else {
-        if (musicPlaying) {
-          audio.pause();
-          musicPlaying = false;
-          musicBtn.textContent = '🎵 播放';
-        } else {
-          audio.play().then(() => {
-            musicPlaying = true;
-            musicBtn.textContent = '🎵 暂停';
-          }).catch(() => {});
-        }
+        if (musicPlaying) { audio.pause(); musicPlaying = false; musicBtn.textContent = '🎵 播放'; }
+        else { audio.play().then(() => { musicPlaying = true; musicBtn.textContent = '🎵 暂停'; }).catch(()=>{}); }
       }
     }
+
+    function getDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        isPinching = true;
+        pinchStartDist = getDistance(e.touches);
+        pinchStartScale = currentScale;
+        pinchStartOffsetX = offsetX;
+        pinchStartOffsetY = offsetY;
+        pinchOverlay.classList.add('active');
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        const newDist = getDistance(e.touches);
+        const scaleChange = newDist / pinchStartDist;
+        const newScale = Math.min(2.5, Math.max(0.8, pinchStartScale * scaleChange));
+        const rect = canvas.getBoundingClientRect();
+        const scaleRatio = newScale / pinchStartScale;
+        offsetX = (offsetX - (e.touches[0].clientX - rect.left)) * scaleRatio + (e.touches[0].clientX - rect.left);
+        offsetY = (offsetY - (e.touches[0].clientY - rect.top)) * scaleRatio + (e.touches[0].clientY - rect.top);
+        currentScale = newScale;
+        drawBoard();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+        pinchOverlay.classList.remove('active');
+      }
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (isPinching) return;
+      const now = Date.now();
+      if (doubleTapEnabled && now - lastTapTime < 300) {
+        e.preventDefault();
+        const p = pixelToBoard(e.clientX, e.clientY);
+        if (p) humanMove(p.row, p.col);
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+        if (!doubleTapEnabled) {
+          const p = pixelToBoard(e.clientX, e.clientY);
+          if (p) humanMove(p.row, p.col);
+        }
+      }
+    });
+
+    doubleTapCheckbox.addEventListener('change', (e) => {
+      doubleTapEnabled = e.target.checked;
+    });
 
     const savedTheme = localStorage.getItem('gomoku-theme');
     if (savedTheme === 'dark') applyTheme('dark');
@@ -763,19 +914,7 @@
     else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
     else applyTheme('light');
 
-    canvas.addEventListener('click', e => {
-      const p = pixelToBoard(e.clientX, e.clientY);
-      if (p) humanMove(p.row, p.col);
-    });
-    canvas.addEventListener('touchstart', e => {
-      e.preventDefault();
-      const t = e.touches[0];
-      if (t) { const p = pixelToBoard(t.clientX, t.clientY); if (p) humanMove(p.row, p.col); }
-    }, {passive: false});
-
-    modeButtons.forEach(btn => {
-      btn.addEventListener('click', () => setGameMode(btn.dataset.mode));
-    });
+    modeButtons.forEach(btn => btn.addEventListener('click', () => setGameMode(btn.dataset.mode)));
     chooseBlackBtn.addEventListener('click', () => setColor('black'));
     chooseWhiteBtn.addEventListener('click', () => setColor('white'));
     restartBtn.addEventListener('click', resetGame);
