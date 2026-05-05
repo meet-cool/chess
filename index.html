@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
-  <title>小志AI 五子棋游戏</title>
+  <title>小志AI 五子棋 · 放水模式</title>
   <style>
     * {
       margin: 0;
@@ -87,6 +87,7 @@
       cursor: pointer;
       font-size: 13px;
       transition: all 0.15s;
+      white-space: nowrap;
     }
     body.dark-mode .mode-option {
       color: #ccc;
@@ -332,6 +333,16 @@
       color: #8f7a66;
       margin-top: 2px;
     }
+    .watermark-badge {
+      display: inline-block;
+      background: #f9f6f2;
+      color: #776e65;
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-weight: bold;
+      font-size: 12px;
+      margin-left: 6px;
+    }
     @media (min-width: 600px) {
       h1.title {
         font-size: 34px;
@@ -351,6 +362,7 @@
       <div class="mode-selector" id="modeSelector">
         <button class="mode-option active-mode" data-mode="casual">🎮 休闲</button>
         <button class="mode-option" data-mode="hardcore">💀 硬核</button>
+        <button class="mode-option" data-mode="water">💧 放水</button>
       </div>
       <button class="hint-toggle-btn" id="hintToggleBtn">💡 提示:关</button>
       <button class="music-btn" id="musicBtn" style="display:none;">🎵 播放</button>
@@ -372,6 +384,7 @@
     <div class="turn-indicator" id="turnDisplay">
       <span id="turnLabel">等待开始</span>
       <span class="stone-icon black" id="turnStone"></span>
+      <span id="waterBadge" class="watermark-badge" style="display:none;">💧放水</span>
     </div>
     <div class="color-buttons">
       <button id="chooseBlackBtn" class="color-btn active-color">⚫ 执黑</button>
@@ -391,23 +404,21 @@
 
   <div class="gesture-hint">👆 双指缩放移动 · 单击落子</div>
   <div class="result-area" id="resultMessage"></div>
-  <div class="footer-note">本页面由AI强力驱动</div>
+  <div class="footer-note">本页面由AI强力驱动 · 放水模式已上线</div>
 </div>
 
 <script>
   (function() {
     const BOARD_SIZE = 15;
     const BASE_SIZE = 500;
-    // 视口变换状态
     let viewScale = 1;
     let viewOffsetX = 0, viewOffsetY = 0;
     
-    // 触摸相关
     let isPinching = false;
     let pinchStartDist = 0;
     let pinchStartScale = 1;
     let pinchStartOffsetX = 0, pinchStartOffsetY = 0;
-    let pinchMidX = 0, pinchMidY = 0; // 两指中点相对于canvas元素的位置
+    let pinchMidX = 0, pinchMidY = 0;
     
     let lastTapTime = 0;
     let doubleTapEnabled = false;
@@ -439,6 +450,7 @@
     const ctx = canvas.getContext('2d');
     const turnLabel = document.getElementById('turnLabel');
     const turnStone = document.getElementById('turnStone');
+    const waterBadge = document.getElementById('waterBadge');
     const resultDiv = document.getElementById('resultMessage');
     const undoBtn = document.getElementById('undoBtn');
     const undoCountSpan = document.getElementById('undoCount');
@@ -454,7 +466,6 @@
     const pinchOverlay = document.getElementById('pinchOverlay');
     const doubleTapCheckbox = document.getElementById('doubleTapCheckbox');
 
-    // 固定canvas分辨率，避免不断重置导致闪烁
     canvas.width = BASE_SIZE;
     canvas.height = BASE_SIZE;
 
@@ -473,7 +484,6 @@
 
     function pixelToBoard(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
-      // 将屏幕坐标映射到canvas内部坐标 (基于viewScale和offset)
       const canvasX = (clientX - rect.left) * (BASE_SIZE / rect.width);
       const canvasY = (clientY - rect.top) * (BASE_SIZE / rect.height);
       const padding = getPADDING();
@@ -510,6 +520,7 @@
       if (!gameStarted) {
         turnLabel.textContent = '等待开始';
         turnStone.className = humanPiece === BLACK ? 'stone-icon black' : 'stone-icon white';
+        waterBadge.style.display = 'none';
         return;
       }
       if (gameOver) return;
@@ -520,6 +531,7 @@
         turnLabel.textContent = 'AI 思考中';
         turnStone.className = aiPiece === BLACK ? 'stone-icon black' : 'stone-icon white';
       }
+      waterBadge.style.display = (gameMode === 'water') ? 'inline-block' : 'none';
     }
 
     function updateUIStates() {
@@ -540,6 +552,12 @@
         hintEnabled = false;
         hintToggleBtn.textContent = '💡 提示:关';
         musicBtn.style.display = 'inline-block';
+      } else if (gameMode === 'water') {
+        undoBtn.disabled = false;
+        hintToggleBtn.disabled = false;
+        musicBtn.style.display = 'none';
+        if (audio) { audio.pause(); audio = null; musicPlaying = false; }
+        musicBtn.textContent = '🎵 播放';
       } else {
         undoBtn.disabled = false;
         hintToggleBtn.disabled = false;
@@ -563,15 +581,19 @@
       if (type === 'human') {
         turnLabel.textContent = '🏆 胜利';
         if (gameMode === 'hardcore') {
-          if (hardcoreCheatDetected) showResult('偶？ 关中王来了？');
-          else showResult('偶？ 关中王来了');
-        } else showResult('✨ 偶？ 关中王来了！');
+          showResult(hardcoreCheatDetected ? '偶？ 关中王来了？' : '偶？ 关中王来了');
+        } else if (gameMode === 'water') {
+          showResult('(💧)陈老师厉害！');
+        } else {
+          showResult('✨ 偶？ 关中王来了！');
+        }
       } else if (type === 'ai') {
         turnLabel.textContent = '🤖 AI胜';
-        showResult('🧘 teacher,侥幸侥幸');
+        if (gameMode === 'water') showResult('🧘 放水模式AI不小心赢了… 再来！');
+        else showResult('🧘 teacher,侥幸侥幸');
       } else {
         turnLabel.textContent = '🤝 平局';
-        showResult('🤝 平局，旗鼓相当');
+        showResult('🤝 平局，老师厉害👍');
       }
       drawBoard();
     }
@@ -671,7 +693,14 @@
     function aiTurn() {
       if (!gameStarted || gameOver || currentTurn !== 'ai') return;
       if (isFull()) { endGame('draw'); return; }
-      const move = getBestMove();
+      
+      let move;
+      if (gameMode === 'water') {
+        move = getWaterMove();
+      } else {
+        move = getBestMove();
+      }
+      
       if (!move) { if (isFull()) endGame('draw'); else { currentTurn = 'human'; updateTurnUI(); } drawBoard(); return; }
       historyStack.push({ row: move.row, col: move.col, piece: aiPiece });
       board[move.row][move.col] = aiPiece;
@@ -725,6 +754,45 @@
         moves.sort((a,b)=>(Math.abs(a.row-center)+Math.abs(a.col-center))-(Math.abs(b.row-center)+Math.abs(b.col-center)));
       }
       return moves[0] || null;
+    }
+
+    function getWaterMove() {
+      let candidateMoves = [];
+      for (let r=0; r<BOARD_SIZE; r++) {
+        for (let c=0; c<BOARD_SIZE; c++) {
+          if (board[r][c] !== 0) continue;
+          const aiScore = evaluate(r,c,aiPiece);
+          const humanScore = evaluate(r,c,humanPiece);
+          candidateMoves.push({row:r, col:c, aiScore, humanScore});
+        }
+      }
+      if (candidateMoves.length === 0) return null;
+
+      const humanThreatThreshold = 800;
+      const blockingMoves = candidateMoves.filter(m => m.humanScore >= humanThreatThreshold);
+      
+      if (blockingMoves.length > 0 && Math.random() < 0.7) {
+        const ignoreBlock = Math.random() < 0.5;
+        if (ignoreBlock) {
+          const nonBlock = candidateMoves.filter(m => m.humanScore < humanThreatThreshold);
+          if (nonBlock.length > 0) {
+            candidateMoves = nonBlock;
+          }
+        }
+      }
+
+      candidateMoves.sort((a,b) => {
+        const aMixed = a.aiScore * 0.7 + a.humanScore * 0.3;
+        const bMixed = b.aiScore * 0.7 + b.humanScore * 0.3;
+        return aMixed - bMixed;
+      });
+
+      const topCount = Math.max(1, Math.floor(candidateMoves.length * 0.3));
+      const weakPool = candidateMoves.slice(0, topCount);
+      
+      if (weakPool.length === 0) return candidateMoves[0];
+      const randomIndex = Math.floor(Math.random() * weakPool.length);
+      return weakPool[randomIndex];
     }
 
     function drawBoard() {
