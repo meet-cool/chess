@@ -563,12 +563,12 @@
       if (type === 'human') {
         turnLabel.textContent = '🏆 胜利';
         if (gameMode === 'hardcore') {
-          if (hardcoreCheatDetected) showResult('可以，你确实赢了，但借助了外力，胜之不武。');
-          else showResult('你很强，够硬核！');
-        } else showResult('✨ 漂亮！你赢了');
+          if (hardcoreCheatDetected) showResult('偶？ 关中王来了？');
+          else showResult('偶？ 关中王来了');
+        } else showResult('✨ 偶？ 关中王来了！');
       } else if (type === 'ai') {
         turnLabel.textContent = '🤖 AI胜';
-        showResult('🧘 年轻人，还得再沉淀沉淀');
+        showResult('🧘 teacher,侥幸侥幸');
       } else {
         turnLabel.textContent = '🤝 平局';
         showResult('🤝 平局，旗鼓相当');
